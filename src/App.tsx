@@ -1,4 +1,5 @@
-import { CalculadoraInflacion } from './components/CalculadoraInflacion'
+import { ComparadorInversion } from './components/ComparadorInversion'
+import { EvolucionSalarial } from './components/EvolucionSalarial'
 import { TipoCambioChart } from './components/TipoCambioChart'
 
 function App() {
@@ -8,7 +9,8 @@ function App() {
         <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
           Dashboard BCRA / INDEC
         </h1>
-        <CalculadoraInflacion />
+        <ComparadorInversion />
+        <EvolucionSalarial />
         <TipoCambioChart />
       </div>
     </div>

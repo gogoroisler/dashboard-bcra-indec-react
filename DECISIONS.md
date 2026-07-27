@@ -64,3 +64,22 @@ Registro de decisiones de diseño relevantes, con el contexto y las alternativas
 **Alternativas consideradas:** fecha exacta con día (descartada, no la soporta la granularidad del dato); destino fijo = "hoy" (descartado a pedido explícito, el caso de cierre de ejercicio contable necesita un destino arbitrario).
 
 ---
+
+### 007 — El producto se divide en dos secciones: decisión de inversión y evolución salarial
+**Fecha:** 2026-07-27
+**Decisión:** Lo que parecía una sola calculadora en realidad responde dos preguntas distintas, con forma de entrada distinta:
+- **Decisión de inversión** ("tenía $X en fecha A, ¿qué me convenía hacer con eso para fecha B?"): un solo monto, se compara contra varios caminos hipotéticos — quedarse en pesos (inflación, ya construido), convertir a dólares (tipo de cambio mayorista, id 5), plazo fijo (tasa de depósitos a 30 días, id 12).
+- **Evolución salarial** ("gané $X en fecha A y ahora gano $Y en fecha B, ¿le gané a la inflación?"): **dos montos reales** (sueldo antiguo y sueldo actual), la pregunta es la diferencia entre el sueldo actual y lo que haría falta ganar para no perder poder adquisitivo.
+Ambas secciones conviven en el mismo dashboard (no son proyectos separados) porque comparten toda la infraestructura ya construida (fetch, construcción de índice, formato de moneda).
+**Por qué:** Forzar las dos preguntas en una sola UI (monto único + dos fechas) responde bien a la primera pregunta pero mal a la segunda — la evolución salarial necesita dos montos reales, no una proyección hipotética de uno solo. Separarlas es más correcto que generalizar de más una sola calculadora.
+**Alternativas consideradas:** una sola calculadora genérica "ajustá cualquier monto" — descartada porque no puede expresar la pregunta salarial (comparar un valor real contra otro valor real) sin una segunda entrada de monto, momento en el que ya es, en los hechos, una calculadora distinta.
+
+---
+
+### 008 — Fuente de la sección salarial: Índice de Salarios de INDEC, no RIPTE
+**Fecha:** 2026-07-27
+**Decisión:** La sección de evolución salarial usa el **Índice de Salarios** de INDEC (serie `149.1_TL_INDIIOS_OCTU_0_21`, base octubre 2016=100, vía la API de series de datos.gob.ar — mismo mecanismo verificado para IPCBA en el BACKLOG). Es un índice de nivel, no requiere reconstrucción por encadenado.
+**Por qué:** A diferencia del intento anterior de sumar el IPC de INDEC en paralelo al del BCRA (descartado en la decisión 005 por ser información duplicada), acá INDEC aporta algo que el BCRA no publica en absoluto: evolución de remuneraciones. Es la primera razón genuina para consumir INDEC en este proyecto, coherente con el nombre del repositorio.
+**Alternativas consideradas:** RIPTE (Remuneración Imponible Promedio de los Trabajadores Estables) — es una referencia salarial muy usada en Argentina (ajuste de alquileres, juicios laborales), pero la publica la Secretaría de Seguridad Social, no INDEC ni BCRA. Se pospone como método comparativo en `BACKLOG.md`, mismo tratamiento que se le dio al IPCBA como alternativa de inflación.
+
+---
