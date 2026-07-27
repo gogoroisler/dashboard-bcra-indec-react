@@ -35,6 +35,16 @@ npm run dev
 
 La app queda en `http://localhost:5173`.
 
+## Tests
+
+```bash
+npm test
+```
+
+Vitest cubre por ahora la lógica de cálculo en `src/lib/` (construcción de índices mensuales,
+coeficiente de ajuste) — es donde ocurrió un bug real durante el desarrollo (ver `AI_USAGE.md`).
+Tests de componentes quedan para una etapa posterior (ver `BACKLOG.md`).
+
 ## Documentación del proyecto
 
 - `roadmap-contexto.md` — contexto general de portfolio y prioridad de este proyecto.

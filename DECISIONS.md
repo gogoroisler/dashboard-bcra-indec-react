@@ -83,3 +83,11 @@ Ambas secciones conviven en el mismo dashboard (no son proyectos separados) porq
 **Alternativas consideradas:** RIPTE (Remuneración Imponible Promedio de los Trabajadores Estables) — es una referencia salarial muy usada en Argentina (ajuste de alquileres, juicios laborales), pero la publica la Secretaría de Seguridad Social, no INDEC ni BCRA. Se pospone como método comparativo en `BACKLOG.md`, mismo tratamiento que se le dio al IPCBA como alternativa de inflación.
 
 ---
+
+### 009 — Vitest para la lógica pura de `src/lib/`, no para componentes todavía
+**Fecha:** 2026-07-27
+**Decisión:** Se suma Vitest (configurado en `vite.config.ts` vía `defineConfig` de `vitest/config`, entorno `node`) con una primera suite en `src/lib/indices.test.ts`, cubriendo `construirIndiceEncadenado`, `construirIndiceDesdeNivel`, `colapsarUltimoPorMes` y `calcularCoeficiente`. Tests de componentes React (interacción de usuario, casos de error en pantalla) quedan pospuestos.
+**Por qué:** Hasta este punto, la única verificación era manual — `tsc` para tipos y capturas de pantalla con Chrome headless para ver la app corriendo. Nada de eso queda guardado corriendo de nuevo mañana. Se priorizó `src/lib/` porque ahí ocurrió esta misma sesión el bug real de compounding (serie diaria tratada como mensual, ver `AI_USAGE.md`) — mismo criterio que ya se usó en `gestion-educativa-react` (decisión 026: testear donde de verdad aparecen los bugs, no por cobertura). Uno de los tests nuevos es explícitamente una prueba de regresión de ese bug puntual.
+**Alternativas consideradas:** empezar por tests de componentes con React Testing Library — pospuesto porque hoy no hay manejo de errores complejo en la UI que lo justifique; se retoma cuando se ataque esa parte (ver `BACKLOG.md`).
+
+---
