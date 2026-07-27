@@ -27,4 +27,10 @@ Misma metodología que se acordó en `gestion-educativa-react`, reutilizada expl
 
 ## Momentos en que se corrigió el rumbo propuesto por la IA
 
-*(vacío por ahora — se completa a medida que avanza el proyecto, no se redacta retroactivamente al final)*
+- **2026-07-27** — En `CalculadoraInflacion.tsx`, la función de cálculo podía devolver dos formas de objeto distintas: `{ coeficiente, montoAjustado }` en el caso de éxito, o `{ error }` en el caso de fallo (mes fuera de rango, etc.). La IA escribió el código que distinguía un caso del otro con el operador `in` (`'montoAjustado' in resultado`), asumiendo que TypeScript iba a "angostar" (narrow) el tipo correctamente a partir de esa comprobación. `tsc` lo rechazó: dentro del bloque que debía ser el caso exitoso, marcaba `coeficiente` como posiblemente `undefined`, es decir, no logró garantizar cuál de las dos formas tenía el objeto. El error apareció de inmediato al correr `npx tsc -b` (no quedó latente ni pasó a runtime). Se corrigió reemplazando el chequeo `in` por un **tipo discriminado** explícito, agregando un campo `ok: true | false` como discriminante:
+  ```ts
+  type ResultadoCalculo =
+    | { ok: true; coeficiente: number; montoAjustado: number }
+    | { ok: false; error: string }
+  ```
+  Con `ok` como campo literal (no un `boolean` genérico), TypeScript sí puede garantizar en cada rama cuál es la forma real del objeto. Este es el patrón estándar en TypeScript para "una función puede devolver un resultado exitoso O un error, con formas de datos distintas" — más confiable que intentar inferir la forma a partir de qué propiedades existen.

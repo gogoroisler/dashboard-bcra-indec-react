@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+:root {
+  --chart-page: #f9f9f7;
+  --chart-surface: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid-line: #e1e0d9;
+  --axis-line: #c3c2b7;
+  --series-1: #2a78d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-page: #0d0d0d;
+    --chart-surface: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid-line: #2c2c2a;
+    --axis-line: #383835;
+    --series-1: #3987e5;
+  }
+}

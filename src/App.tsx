@@ -1,7 +1,16 @@
+import { CalculadoraInflacion } from './components/CalculadoraInflacion'
+import { TipoCambioChart } from './components/TipoCambioChart'
+
 function App() {
   return (
-    <div className="min-h-screen bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-      <h1 className="p-8 text-2xl font-semibold">Dashboard BCRA / INDEC</h1>
+    <div className="min-h-screen bg-[var(--chart-page)]">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+          Dashboard BCRA / INDEC
+        </h1>
+        <CalculadoraInflacion />
+        <TipoCambioChart />
+      </div>
     </div>
   )
 }
