@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchSerieMonetaria, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
+import { fetchSerieMonetariaCompleta, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
 import { calcularCoeficiente, construirIndiceDesdeNivel } from '../lib/indices'
 
 const formatMoneda = (valor: number) =>
@@ -26,7 +26,7 @@ export function AjusteAlquileres() {
 
   useEffect(() => {
     let cancelado = false
-    fetchSerieMonetaria(VARIABLES_BCRA.icl, { limit: 3000 })
+    fetchSerieMonetariaCompleta(VARIABLES_BCRA.icl)
       .then((puntos) => {
         if (cancelado) return
         const ascendente = [...puntos].reverse()

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchSerieMonetaria, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
+import { fetchSerieMonetariaCompleta, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
 import { fetchSerieDatosGobAr, SERIES_DATOS_GOB_AR } from '../lib/datosGobAr'
 import {
   calcularCoeficiente,
@@ -61,7 +61,7 @@ export function EvolucionSalarial() {
   useEffect(() => {
     let cancelado = false
     Promise.all([
-      fetchSerieMonetaria(VARIABLES_BCRA.inflacionMensual, { limit: 1500 }),
+      fetchSerieMonetariaCompleta(VARIABLES_BCRA.inflacionMensual),
       fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.indiceSalarios),
     ])
       .then(([inflacionDesc, salariosIndec]) => {

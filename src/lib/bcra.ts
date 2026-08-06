@@ -44,3 +44,38 @@ export async function fetchSerieMonetaria(
   const data: MonetariasSerieResponse = await res.json()
   return data.results[0]?.detalle ?? []
 }
+
+/** Tope real de la API por request — confirmado por el mensaje de error si se pide más. */
+const LIMITE_POR_PAGINA = 3000
+
+/**
+ * Trae el historial completo de una variable, paginando con `offset` las veces
+ * que haga falta. Necesario para series largas (tipo de cambio, tasas) que
+ * superan el tope de 3000 registros por request — con una sola llamada nos
+ * quedábamos solo con los últimos ~3000 registros sin darnos cuenta (ver
+ * DECISIONS.md 014).
+ */
+export async function fetchSerieMonetariaCompleta(idVariable: number): Promise<PuntoSerie[]> {
+  const todos: PuntoSerie[] = []
+  let offset = 0
+
+  while (true) {
+    const params = new URLSearchParams({
+      limit: String(LIMITE_POR_PAGINA),
+      offset: String(offset),
+    })
+    const res = await fetch(`${BASE_URL}/monetarias/${idVariable}?${params}`)
+    if (!res.ok) {
+      throw new Error(`BCRA API respondió ${res.status} para la variable ${idVariable}`)
+    }
+
+    const data: MonetariasSerieResponse = await res.json()
+    const pagina = data.results[0]?.detalle ?? []
+    todos.push(...pagina)
+
+    if (pagina.length < LIMITE_POR_PAGINA) break
+    offset += LIMITE_POR_PAGINA
+  }
+
+  return todos
+}

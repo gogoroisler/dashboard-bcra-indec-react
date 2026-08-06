@@ -123,3 +123,11 @@ Ambas secciones conviven en el mismo dashboard (no son proyectos separados) porq
 **Alternativas consideradas:** granularidad fija (siempre mensual o siempre anual) — descartada por no servir bien en ambos extremos del rango de fechas que soporta la calculadora (desde 1943).
 
 ---
+
+### 014 — Paginar las series del BCRA en vez de pedir un único `limit: 3000`
+**Fecha:** 2026-08-06
+**Decisión:** Se agrega `fetchSerieMonetariaCompleta` en `src/lib/bcra.ts`, que pagina con el parámetro `offset` hasta traer todo el historial disponible de una variable, en vez de un solo pedido con `limit: 3000`. `ComparadorInversion`, `EvolucionSalarial` y `AjusteAlquileres` pasan a usarla para inflación, tipo de cambio, tasa de depósitos e ICL. `TipoCambioChart` sigue usando `fetchSerieMonetaria` con `limit: 180` sin cambios — a propósito solo quiere los últimos 180 días para el gráfico, no el historial completo.
+**Por qué:** Santiago notó que no podía ver información más atrás de ~2010 para tipo de cambio y tasa de depósitos. Al revisar el catálogo del BCRA (campo `primerFechaInformada`), la variable de tipo de cambio mayorista en realidad tiene datos desde **2002-03-04** (5986 registros) y la tasa de depósitos desde **1985-08-26** (9586 registros) — muy por encima del tope de 3000 registros por request de la API. Como `fetchSerieMonetaria` solo pedía una página, nos quedábamos en silencio con los ~3000 registros más recientes de cada serie (≈2014 en adelante) sin ningún error ni aviso — el código nunca falló, simplemente devolvía menos historia de la que existe. No fue detectado por revisión propia ni por un test (nada de lo que probamos manualmente necesitaba fechas tan viejas) — lo encontró Santiago al intentar elegir una fecha anterior a 2010.
+**Alternativas consideradas:** subir el `limit` — no es posible, la API lo rechaza con `400` por encima de 3000 (es un tope real, no una elección nuestra). Usar `desde`/`hasta` apuntando a `primerFechaInformada` del catálogo en vez de paginar con `offset` — descartado porque agrega una llamada extra al catálogo sin necesidad: paginar hasta recibir una página más corta que el límite ya detecta el final de los datos por sí solo.
+
+---

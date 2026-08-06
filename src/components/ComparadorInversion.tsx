@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchSerieMonetaria, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
+import { fetchSerieMonetariaCompleta, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
 import { fetchSerieDatosGobAr, SERIES_DATOS_GOB_AR } from '../lib/datosGobAr'
 import { EvolucionChart } from './EvolucionChart'
 import {
@@ -81,9 +81,9 @@ export function ComparadorInversion() {
   useEffect(() => {
     let cancelado = false
     Promise.all([
-      fetchSerieMonetaria(VARIABLES_BCRA.inflacionMensual, { limit: 1500 }),
-      fetchSerieMonetaria(VARIABLES_BCRA.tipoCambioMayorista, { limit: 3000 }),
-      fetchSerieMonetaria(VARIABLES_BCRA.tasaDepositos30Dias, { limit: 3000 }),
+      fetchSerieMonetariaCompleta(VARIABLES_BCRA.inflacionMensual),
+      fetchSerieMonetariaCompleta(VARIABLES_BCRA.tipoCambioMayorista),
+      fetchSerieMonetariaCompleta(VARIABLES_BCRA.tasaDepositos30Dias),
       fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.ipcba),
     ])
       .then(([inflacion, dolar, tasaDepositos, ipcba]) => {
