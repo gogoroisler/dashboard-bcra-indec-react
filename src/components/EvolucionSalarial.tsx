@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchSerieMonetaria, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
-import { fetchSerieIndec, SERIES_INDEC } from '../lib/indec'
+import { fetchSerieDatosGobAr, SERIES_DATOS_GOB_AR } from '../lib/datosGobAr'
 import {
   calcularCoeficiente,
   construirIndiceDesdeNivel,
@@ -62,7 +62,7 @@ export function EvolucionSalarial() {
     let cancelado = false
     Promise.all([
       fetchSerieMonetaria(VARIABLES_BCRA.inflacionMensual, { limit: 1500 }),
-      fetchSerieIndec(SERIES_INDEC.indiceSalarios),
+      fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.indiceSalarios),
     ])
       .then(([inflacionDesc, salariosIndec]) => {
         if (cancelado) return

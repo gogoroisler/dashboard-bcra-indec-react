@@ -2,16 +2,22 @@ import type { PuntoSerie } from './bcra'
 
 const BASE_URL = 'https://apis.datos.gob.ar/series/api/series'
 
-/** IDs de serie relevantes — ver DECISIONS.md (008). */
-export const SERIES_INDEC = {
+/**
+ * IDs de serie relevantes de la API de series de datos.gob.ar. No todas son de
+ * INDEC: indiceSalarios sí lo es (ver DECISIONS.md 008); ipcba la publica el
+ * IDECBA, el organismo de estadísticas de la Ciudad de Buenos Aires, no INDEC
+ * (ver DECISIONS.md 011) — comparten API pero no son la misma fuente.
+ */
+export const SERIES_DATOS_GOB_AR = {
   indiceSalarios: '149.1_TL_INDIIOS_OCTU_0_21',
+  ipcba: '193.2_NIVEL_GENERAL_2021_0_13_2',
 } as const
 
 interface SeriesResponse {
   data: Array<[string, number]>
 }
 
-export async function fetchSerieIndec(idSerie: string, limit = 1000): Promise<PuntoSerie[]> {
+export async function fetchSerieDatosGobAr(idSerie: string, limit = 1000): Promise<PuntoSerie[]> {
   const res = await fetch(`${BASE_URL}/?ids=${idSerie}&limit=${limit}`)
   if (!res.ok) {
     throw new Error(`API de series respondió ${res.status} para la serie ${idSerie}`)

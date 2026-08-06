@@ -1,6 +1,11 @@
 # Dashboard BCRA / INDEC
 
-Dashboard de indicadores económicos argentinos (tipo de cambio, tasas de interés, inflación) consumiendo APIs públicas del BCRA y datos de series de tiempo de INDEC.
+Herramientas para decisiones financieras cotidianas en Argentina, con datos públicos del BCRA y del INDEC:
+
+- **¿Qué me convenía hacer con mi plata?** — comparación entre quedarte en pesos (inflación nacional e IPCBA), comprar dólares o hacer un plazo fijo, con gráfico de evolución.
+- **¿Tu sueldo le ganó a la inflación?** — comparación de sueldo anterior vs. actual contra inflación y contra el Índice de Salarios de INDEC.
+- **Ajuste de alquileres según ICL.**
+- Gráfico de tipo de cambio mayorista.
 
 Proyecto de portfolio — carrera Técnico en Desarrollo de Software.
 

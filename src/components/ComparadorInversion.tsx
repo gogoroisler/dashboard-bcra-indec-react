@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchSerieMonetaria, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
+import { fetchSerieDatosGobAr, SERIES_DATOS_GOB_AR } from '../lib/datosGobAr'
+import { EvolucionChart } from './EvolucionChart'
 import {
   calcularCoeficiente,
   construirIndiceDesdeNivel,
@@ -21,6 +23,32 @@ type ResultadoCalculo =
   | { ok: true; coeficiente: number; montoResultado: number }
   | { ok: false; error: string }
 
+function ResultadoLinea({
+  etiqueta,
+  resultado,
+}: {
+  etiqueta?: string
+  resultado: ResultadoCalculo
+}) {
+  return (
+    <div>
+      {etiqueta && <p className="text-xs text-[var(--text-muted)]">{etiqueta}</p>}
+      {resultado.ok ? (
+        <>
+          <p className="text-xl font-semibold text-[var(--text-primary)]">
+            {formatMoneda(resultado.montoResultado)}
+          </p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {formatPorcentaje((resultado.coeficiente - 1) * 100)}%
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-[var(--text-muted)]">{resultado.error}</p>
+      )}
+    </div>
+  )
+}
+
 function calcularResultado(
   indice: IndiceMensual,
   mesOrigen: string,
@@ -39,6 +67,7 @@ interface SeriesCargadas {
   inflacion: PuntoSerie[]
   dolar: PuntoSerie[]
   tasaDepositos: PuntoSerie[]
+  ipcba: PuntoSerie[]
 }
 
 export function ComparadorInversion() {
@@ -55,18 +84,24 @@ export function ComparadorInversion() {
       fetchSerieMonetaria(VARIABLES_BCRA.inflacionMensual, { limit: 1500 }),
       fetchSerieMonetaria(VARIABLES_BCRA.tipoCambioMayorista, { limit: 3000 }),
       fetchSerieMonetaria(VARIABLES_BCRA.tasaDepositos30Dias, { limit: 3000 }),
+      fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.ipcba),
     ])
-      .then(([inflacion, dolar, tasaDepositos]) => {
+      .then(([inflacion, dolar, tasaDepositos, ipcba]) => {
         if (cancelado) return
         const cargadas: SeriesCargadas = {
           inflacion: [...inflacion].reverse(),
           dolar: [...dolar].reverse(),
           tasaDepositos: [...tasaDepositos].reverse(),
+          ipcba, // ya viene ascendente de datos.gob.ar
         }
         setSeries(cargadas)
 
-        // El rango útil es la intersección: dólar y tasa solo tienen datos desde 2014,
-        // aunque inflación tenga historia desde 1943.
+        // El rango de los selectores de fecha usa solo inflación/dólar/tasa (desde 2014).
+        // IPCBA queda afuera de esta cuenta a propósito: tiene menos historia y más
+        // rezago (ver DECISIONS.md 011) — si entrara acá, achicaría el rango disponible
+        // para las otras tres referencias por una sola que va más atrasada. IPCBA calcula
+        // su propio resultado por separado y muestra su propio error si el mes elegido
+        // queda fuera de su rango, sin restringir al resto.
         const minComun = [cargadas.inflacion, cargadas.dolar, cargadas.tasaDepositos]
           .map((s) => s[0].fecha.slice(0, 7))
           .reduce((a, b) => (a > b ? a : b))
@@ -98,6 +133,7 @@ export function ComparadorInversion() {
         series.tasaDepositos,
         (p) => 1 + p.valor / 12 / 100,
       ),
+      ipcba: construirIndiceDesdeNivel(series.ipcba),
     }
   }, [series])
 
@@ -120,6 +156,7 @@ export function ComparadorInversion() {
       inflacion: calcularResultado(indices.inflacion, mesOrigen, mesDestino, montoNumero),
       dolar: calcularResultado(indices.dolar, mesOrigen, mesDestino, montoNumero),
       tasaDepositos: calcularResultado(indices.tasaDepositos, mesOrigen, mesDestino, montoNumero),
+      ipcba: calcularResultado(indices.ipcba, mesOrigen, mesDestino, montoNumero),
     }
   }, [indices, mesOrigen, mesDestino, montoNumero])
 
@@ -130,7 +167,8 @@ export function ComparadorInversion() {
       </h2>
       <p className="mb-4 text-sm text-[var(--text-secondary)]">
         Si tenías un monto en el mes de origen, comparación de tres caminos hasta el mes de
-        destino: quedarte en pesos, comprar dólares, o un plazo fijo. Todo con datos del BCRA.
+        destino: quedarte en pesos, comprar dólares, o un plazo fijo. Datos del BCRA, con el IPCBA
+        (INDEC/IDECBA) como segunda referencia de inflación para CABA.
       </p>
 
       {errorCarga && (
@@ -179,30 +217,40 @@ export function ComparadorInversion() {
 
           {resultados && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-md border border-[var(--grid-line)] p-3">
+                <p className="text-sm text-[var(--text-secondary)]">Quedarte en pesos</p>
+                <ResultadoLinea etiqueta="Nacional (BCRA)" resultado={resultados.inflacion} />
+                <div className="mt-3 border-t border-[var(--grid-line)] pt-3">
+                  <ResultadoLinea etiqueta="Ciudad de Buenos Aires (IPCBA)" resultado={resultados.ipcba} />
+                  <p className="mt-1 text-xs text-[var(--text-muted)]">
+                    El IPCBA mide precios solo de CABA, no de todo el país — no es directamente
+                    comparable con el resto del dashboard.
+                  </p>
+                </div>
+              </div>
+
               {(
                 [
-                  ['Quedarte en pesos', resultados.inflacion],
                   ['Comprar dólares', resultados.dolar],
                   ['Plazo fijo', resultados.tasaDepositos],
                 ] as const
               ).map(([titulo, resultado]) => (
                 <div key={titulo} className="rounded-md border border-[var(--grid-line)] p-3">
                   <p className="text-sm text-[var(--text-secondary)]">{titulo}</p>
-                  {resultado.ok ? (
-                    <>
-                      <p className="text-xl font-semibold text-[var(--text-primary)]">
-                        {formatMoneda(resultado.montoResultado)}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {formatPorcentaje((resultado.coeficiente - 1) * 100)}%
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-[var(--text-muted)]">{resultado.error}</p>
-                  )}
+                  <ResultadoLinea resultado={resultado} />
                 </div>
               ))}
             </div>
+          )}
+
+          {indices && (
+            <EvolucionChart
+              indice={indices.inflacion}
+              mesOrigen={mesOrigen}
+              mesDestino={mesDestino}
+              monto={montoNumero}
+              titulo="Evolución del monto necesario para no perder contra la inflación (nacional, BCRA)"
+            />
           )}
         </div>
       )}

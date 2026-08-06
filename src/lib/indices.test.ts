@@ -4,6 +4,7 @@ import {
   colapsarUltimoPorMes,
   construirIndiceDesdeNivel,
   construirIndiceEncadenado,
+  generarMesesEvolucion,
 } from './indices'
 import type { PuntoSerie } from './bcra'
 
@@ -72,6 +73,45 @@ describe('construirIndiceDesdeNivel', () => {
 
     expect(indice['2024-01']).toBe(850)
     expect(indice['2024-02']).toBe(900)
+  })
+})
+
+describe('generarMesesEvolucion', () => {
+  it('genera un punto por mes cuando el rango es menor a 3 años', () => {
+    expect(generarMesesEvolucion('2024-01', '2024-04')).toEqual([
+      '2024-01',
+      '2024-02',
+      '2024-03',
+      '2024-04',
+    ])
+  })
+
+  it('genera un punto por año (mismo mes que el origen) cuando el rango es de 3 años o más', () => {
+    expect(generarMesesEvolucion('2020-03', '2023-03')).toEqual([
+      '2020-03',
+      '2021-03',
+      '2022-03',
+      '2023-03',
+    ])
+  })
+
+  it('agrega el mes de destino al final aunque no coincida con el mes calendario del origen', () => {
+    expect(generarMesesEvolucion('2018-03', '2026-07')).toEqual([
+      '2018-03',
+      '2019-03',
+      '2020-03',
+      '2021-03',
+      '2022-03',
+      '2023-03',
+      '2024-03',
+      '2025-03',
+      '2026-03',
+      '2026-07',
+    ])
+  })
+
+  it('devuelve un único punto si origen y destino son el mismo mes', () => {
+    expect(generarMesesEvolucion('2024-05', '2024-05')).toEqual(['2024-05'])
   })
 })
 

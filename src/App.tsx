@@ -1,3 +1,4 @@
+import { AjusteAlquileres } from './components/AjusteAlquileres'
 import { ComparadorInversion } from './components/ComparadorInversion'
 import { EvolucionSalarial } from './components/EvolucionSalarial'
 import { TipoCambioChart } from './components/TipoCambioChart'
@@ -19,6 +20,7 @@ function App() {
         <main className="space-y-6">
           <ComparadorInversion />
           <EvolucionSalarial />
+          <AjusteAlquileres />
           <TipoCambioChart />
         </main>
       </div>

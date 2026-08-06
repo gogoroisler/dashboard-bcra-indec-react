@@ -99,3 +99,27 @@ Ambas secciones conviven en el mismo dashboard (no son proyectos separados) porq
 **Alternativas consideradas:** buildear localmente y pushear `dist/` a una rama `gh-pages` (con la librería `gh-pages` de npm, o a mano) — descartado porque depende de acordarse de buildear antes de cada publicación; el workflow lo hace solo y no puede quedar desincronizado de `main`.
 
 ---
+
+### 011 — IPCBA como segunda referencia dentro de "Quedarte en pesos", no como tarjeta aparte
+**Fecha:** 2026-08-06
+**Decisión:** El IPCBA (backlog previo, serie `193.2_NIVEL_GENERAL_2021_0_13_2`) se muestra como un segundo resultado dentro de la misma tarjeta "Quedarte en pesos" de `ComparadorInversion` — inflación nacional (BCRA) e IPCBA (CABA) lado a lado, no una cuarta tarjeta separada.
+**Por qué:** Las dos cifras responden la misma pregunta ("si te quedabas en pesos, cuánto necesitabas") con dos fuentes distintas — agruparlas mantiene la comparación principal en tres opciones (pesos / dólar / plazo fijo) en vez de diluirla en cuatro, y dejan clara la relación entre ambas cifras (dos respuestas a la misma pregunta) en vez de sugerir que son opciones distintas entre sí.
+**Alternativas consideradas:** tarjeta separada para IPCBA — descartada por el motivo anterior.
+
+---
+
+### 012 — Se reincorpora el ajuste de alquileres por ICL, que había quedado afuera sin decisión explícita
+**Fecha:** 2026-08-06
+**Decisión:** Se agrega una tercera sección al dashboard, ajuste de alquileres según el ICL del BCRA (`idVariable` 40, ya definido en `VARIABLES_BCRA` desde la decisión 005 pero nunca usado). Mismo patrón que las secciones existentes: monto (alquiler) + mes de origen + mes de destino → alquiler ajustado, vía `construirIndiceDesdeNivel` (el ICL ya es un índice de nivel, no requiere reconstrucción).
+**Por qué:** Estaba en el alcance original del MVP (decisión 005, tabla de las cuatro calculadoras) pero se perdió en el camino cuando el producto se redefinió en dos secciones (decisión 007), que no lo mencionó ni para incluirlo ni para descartarlo explícitamente — fue un olvido, no un corte consciente. Se detectó al pedido de Santiago, no por revisión propia.
+**Nota de dominio:** recordar el rótulo "ajuste según ICL" y no "aumento exigido por ley", ya documentado en la decisión 005 (el ICL dejó de ser obligatorio desde el DNU 70/2023).
+
+---
+
+### 013 — Gráfico de evolución punta a punta para el ajuste por inflación, con granularidad variable
+**Fecha:** 2026-08-06
+**Decisión:** La tarjeta de inflación en `ComparadorInversion` suma un gráfico de línea mostrando el monto ajustado en los puntos intermedios entre el mes de origen y el mes de destino, no solo el resultado final. Regla de granularidad: si la diferencia entre ambos meses es de **3 años o más**, un punto por año usando el mismo mes calendario que el origen/destino (ej. origen=marzo 2020, destino=marzo 2026 → un punto cada marzo); si es **menor a 3 años**, un punto por mes. Por ahora se implementa solo para inflación — no para dólar, plazo fijo ni alquileres — aunque el mecanismo (mismo índice mensual ya construido) es reutilizable para los otros tres sin rehacer nada.
+**Por qué:** Con rangos largos (décadas), un punto por mes generaría cientos de puntos y un gráfico ilegible; con rangos cortos, un punto por año sería demasiado poco detalle (¿3 puntos para 2 años?). La regla de 3 años balancea ambos casos. Se prioriza inflación primero porque fue el pedido explícito — el resto queda pospuesto, no descartado.
+**Alternativas consideradas:** granularidad fija (siempre mensual o siempre anual) — descartada por no servir bien en ambos extremos del rango de fechas que soporta la calculadora (desde 1943).
+
+---

@@ -50,6 +50,46 @@ export function construirIndiceDesdeNivel(serieAscendente: PuntoSerie[]): Indice
   return indice
 }
 
+/**
+ * Genera los meses intermedios entre origen y destino para graficar una evolución.
+ * Regla: si la diferencia es de 3 años o más, un punto por año (mismo mes
+ * calendario que el origen); si es menor, un punto por mes. El mes de destino
+ * siempre queda incluido como último punto, aunque no caiga en el mismo mes
+ * calendario que el origen (ver DECISIONS.md 013).
+ */
+export function generarMesesEvolucion(mesOrigen: string, mesDestino: string): string[] {
+  const [anioOrigen, mesNumOrigen] = mesOrigen.split('-').map(Number)
+  const [anioDestino, mesNumDestino] = mesDestino.split('-').map(Number)
+  const totalMeses = (anioDestino - anioOrigen) * 12 + (mesNumDestino - mesNumOrigen)
+
+  if (totalMeses <= 0) return [mesOrigen]
+
+  const puntos: string[] = []
+
+  if (totalMeses / 12 >= 3) {
+    for (let anio = anioOrigen; anio <= anioDestino; anio++) {
+      puntos.push(`${anio}-${String(mesNumOrigen).padStart(2, '0')}`)
+    }
+  } else {
+    let anio = anioOrigen
+    let mes = mesNumOrigen
+    while (anio < anioDestino || (anio === anioDestino && mes <= mesNumDestino)) {
+      puntos.push(`${anio}-${String(mes).padStart(2, '0')}`)
+      mes += 1
+      if (mes > 12) {
+        mes = 1
+        anio += 1
+      }
+    }
+  }
+
+  if (puntos[puntos.length - 1] !== mesDestino) {
+    puntos.push(mesDestino)
+  }
+
+  return puntos
+}
+
 export function calcularCoeficiente(
   indice: IndiceMensual,
   mesOrigen: string,
