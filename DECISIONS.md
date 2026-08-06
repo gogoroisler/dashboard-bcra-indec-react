@@ -91,3 +91,11 @@ Ambas secciones conviven en el mismo dashboard (no son proyectos separados) porq
 **Alternativas consideradas:** empezar por tests de componentes con React Testing Library — pospuesto porque hoy no hay manejo de errores complejo en la UI que lo justifique; se retoma cuando se ataque esa parte (ver `BACKLOG.md`).
 
 ---
+
+### 010 — Deploy a GitHub Pages vía GitHub Actions, no build manual
+**Fecha:** 2026-07-28
+**Decisión:** Se agrega `.github/workflows/deploy.yml`: en cada push a `main`, corre `npm ci && npm run build` y publica `dist/` a GitHub Pages con `actions/upload-pages-artifact` + `actions/deploy-pages`. Además, `vite.config.ts` fija `base: '/dashboard-bcra-indec-react/'`.
+**Por qué:** El deploy anterior (ver entrada del 2026-07-27 en `BACKLOG.md`) mostraba la página en blanco por dos motivos: Pages publicaba el código fuente sin buildear (`<script src="/src/main.tsx">`, que ningún navegador ejecuta), y aunque se buildeara, Vite generaba rutas absolutas desde la raíz del dominio en vez de considerar el subpath del proyecto. El workflow resuelve el primer problema (siempre se publica el build, nunca el código fuente) y el `base` resuelve el segundo. Requiere un paso manual único: cambiar la fuente de Pages a "GitHub Actions" en Settings → Pages del repositorio (no se puede hacer por API sin autenticación).
+**Alternativas consideradas:** buildear localmente y pushear `dist/` a una rama `gh-pages` (con la librería `gh-pages` de npm, o a mano) — descartado porque depende de acordarse de buildear antes de cada publicación; el workflow lo hace solo y no puede quedar desincronizado de `main`.
+
+---
