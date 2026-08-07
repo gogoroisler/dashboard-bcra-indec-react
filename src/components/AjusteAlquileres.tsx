@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchSerieMonetariaCompleta, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
 import { calcularCoeficiente, construirIndiceDesdeNivel } from '../lib/indices'
+import { useAsyncData } from '../hooks/useAsyncData'
+import { MensajeError } from './MensajeError'
 
 const formatMoneda = (valor: number) =>
   valor.toLocaleString('es-AR', {
@@ -17,34 +19,30 @@ type Resultado =
   | { ok: false; error: string }
 
 export function AjusteAlquileres() {
-  const [serie, setSerie] = useState<PuntoSerie[] | null>(null)
-  const [errorCarga, setErrorCarga] = useState<string | null>(null)
+  const {
+    datos: serie,
+    error: errorCarga,
+    reintentar,
+  } = useAsyncData<PuntoSerie[]>(() =>
+    fetchSerieMonetariaCompleta(VARIABLES_BCRA.icl).then((puntos) => [...puntos].reverse()),
+  )
 
   const [monto, setMonto] = useState('100000')
   const [mesOrigen, setMesOrigen] = useState('')
   const [mesDestino, setMesDestino] = useState('')
 
+  // Los selectores de fecha arrancan vacíos hasta que llegan los datos; ese
+  // primer valor por default se calcula una sola vez, cuando `serie` pasa de
+  // null a tener contenido.
   useEffect(() => {
-    let cancelado = false
-    fetchSerieMonetariaCompleta(VARIABLES_BCRA.icl)
-      .then((puntos) => {
-        if (cancelado) return
-        const ascendente = [...puntos].reverse()
-        setSerie(ascendente)
-        setMesDestino(ascendente[ascendente.length - 1].fecha.slice(0, 7))
-        const minMes = ascendente[0].fecha.slice(0, 7)
-        const idxHaceUnAnio = Math.max(0, ascendente.length - 1 - 365)
-        const candidato = ascendente[idxHaceUnAnio].fecha.slice(0, 7)
-        setMesOrigen(candidato > minMes ? candidato : minMes)
-      })
-      .catch((err: unknown) => {
-        if (cancelado) return
-        setErrorCarga(err instanceof Error ? err.message : 'Error al cargar datos')
-      })
-    return () => {
-      cancelado = true
-    }
-  }, [])
+    if (!serie || mesDestino) return
+    setMesDestino(serie[serie.length - 1].fecha.slice(0, 7))
+    const minMes = serie[0].fecha.slice(0, 7)
+    const idxHaceUnAnio = Math.max(0, serie.length - 1 - 365)
+    const candidato = serie[idxHaceUnAnio].fecha.slice(0, 7)
+    setMesOrigen(candidato > minMes ? candidato : minMes)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serie])
 
   const indice = useMemo(() => (serie ? construirIndiceDesdeNivel(serie) : null), [serie])
 
@@ -53,16 +51,18 @@ export function AjusteAlquileres() {
     return { min: serie[0].fecha.slice(0, 7), max: serie[serie.length - 1].fecha.slice(0, 7) }
   }, [serie])
 
+  const montoNumero = Number(monto)
+  const montoValido = !Number.isNaN(montoNumero) && montoNumero > 0
+
   const resultado: Resultado | null = useMemo(() => {
-    const montoNumero = Number(monto)
-    if (!indice || !mesOrigen || !mesDestino || Number.isNaN(montoNumero)) return null
+    if (!indice || !mesOrigen || !mesDestino || !montoValido) return null
     try {
       const coeficiente = calcularCoeficiente(indice, mesOrigen, mesDestino)
       return { ok: true, coeficiente, montoAjustado: montoNumero * coeficiente }
     } catch (err: unknown) {
       return { ok: false, error: err instanceof Error ? err.message : 'No se pudo calcular' }
     }
-  }, [indice, mesOrigen, mesDestino, monto])
+  }, [indice, mesOrigen, mesDestino, montoValido, montoNumero])
 
   return (
     <div className="rounded-lg border border-[var(--grid-line)] bg-[var(--chart-surface)] p-4">
@@ -76,9 +76,7 @@ export function AjusteAlquileres() {
       </p>
 
       {errorCarga && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No se pudo cargar el ICL: {errorCarga}
-        </p>
+        <MensajeError mensaje={`No se pudo cargar el ICL: ${errorCarga}`} onReintentar={reintentar} />
       )}
 
       {!errorCarga && !serie && <p className="text-sm text-[var(--text-muted)]">Cargando…</p>}
@@ -94,6 +92,11 @@ export function AjusteAlquileres() {
                 onChange={(e) => setMonto(e.target.value)}
                 className="rounded border border-[var(--axis-line)] bg-transparent px-2 py-1 text-[var(--text-primary)]"
               />
+              {!montoValido && (
+                <span className="text-xs text-[var(--text-secondary)]">
+                  Ingresá un monto mayor a cero
+                </span>
+              )}
             </label>
             <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
               Mes del último ajuste

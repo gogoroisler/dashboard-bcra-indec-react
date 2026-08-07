@@ -7,6 +7,8 @@ import {
   construirIndiceEncadenado,
   type IndiceMensual,
 } from '../lib/indices'
+import { useAsyncData } from '../hooks/useAsyncData'
+import { MensajeError } from './MensajeError'
 
 const formatMoneda = (valor: number) =>
   valor.toLocaleString('es-AR', {
@@ -50,48 +52,24 @@ interface SeriesCargadas {
 }
 
 export function EvolucionSalarial() {
-  const [series, setSeries] = useState<SeriesCargadas | null>(null)
-  const [errorCarga, setErrorCarga] = useState<string | null>(null)
+  const {
+    datos: series,
+    error: errorCarga,
+    reintentar,
+  } = useAsyncData<SeriesCargadas>(() =>
+    Promise.all([
+      fetchSerieMonetariaCompleta(VARIABLES_BCRA.inflacionMensual),
+      fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.indiceSalarios),
+    ]).then(([inflacionDesc, salariosIndec]) => ({
+      inflacion: [...inflacionDesc].reverse(),
+      salariosIndec, // la API de INDEC ya devuelve orden ascendente
+    })),
+  )
 
   const [sueldoAntiguo, setSueldoAntiguo] = useState('500000')
   const [sueldoActual, setSueldoActual] = useState('600000')
   const [mesOrigen, setMesOrigen] = useState('')
   const [mesDestino, setMesDestino] = useState('')
-
-  useEffect(() => {
-    let cancelado = false
-    Promise.all([
-      fetchSerieMonetariaCompleta(VARIABLES_BCRA.inflacionMensual),
-      fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.indiceSalarios),
-    ])
-      .then(([inflacionDesc, salariosIndec]) => {
-        if (cancelado) return
-        const cargadas: SeriesCargadas = {
-          inflacion: [...inflacionDesc].reverse(),
-          salariosIndec, // la API de INDEC ya devuelve orden ascendente
-        }
-        setSeries(cargadas)
-
-        const minComun = [cargadas.inflacion, cargadas.salariosIndec]
-          .map((s) => s[0].fecha.slice(0, 7))
-          .reduce((a, b) => (a > b ? a : b))
-        const maxComun = [cargadas.inflacion, cargadas.salariosIndec]
-          .map((s) => s[s.length - 1].fecha.slice(0, 7))
-          .reduce((a, b) => (a < b ? a : b))
-
-        setMesDestino(maxComun)
-        const [anio, mes] = maxComun.split('-').map(Number)
-        const haceUnAnio = new Date(anio, mes - 1 - 12, 1).toISOString().slice(0, 7)
-        setMesOrigen(haceUnAnio > minComun ? haceUnAnio : minComun)
-      })
-      .catch((err: unknown) => {
-        if (cancelado) return
-        setErrorCarga(err instanceof Error ? err.message : 'Error al cargar datos')
-      })
-    return () => {
-      cancelado = true
-    }
-  }, [])
 
   const indices = useMemo(() => {
     if (!series) return null
@@ -110,19 +88,27 @@ export function EvolucionSalarial() {
     return { min: mins.reduce((a, b) => (a > b ? a : b)), max: maxs.reduce((a, b) => (a < b ? a : b)) }
   }, [series])
 
+  // Valores por default de los selectores de mes, calculados una sola vez
+  // cuando llega el rango (no se pisan si el usuario ya los cambió).
+  useEffect(() => {
+    if (!rango || mesDestino) return
+    setMesDestino(rango.max)
+    const [anio, mes] = rango.max.split('-').map(Number)
+    const haceUnAnio = new Date(anio, mes - 1 - 12, 1).toISOString().slice(0, 7)
+    setMesOrigen(haceUnAnio > rango.min ? haceUnAnio : rango.min)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rango])
+
   const antiguoNumero = Number(sueldoAntiguo)
   const actualNumero = Number(sueldoActual)
+  const sueldosValidos =
+    !Number.isNaN(antiguoNumero) &&
+    antiguoNumero > 0 &&
+    !Number.isNaN(actualNumero) &&
+    actualNumero > 0
 
   const resultados = useMemo(() => {
-    if (
-      !indices ||
-      !mesOrigen ||
-      !mesDestino ||
-      Number.isNaN(antiguoNumero) ||
-      Number.isNaN(actualNumero)
-    ) {
-      return null
-    }
+    if (!indices || !mesOrigen || !mesDestino || !sueldosValidos) return null
     return {
       inflacion: calcularDiferenciaSalarial(
         indices.inflacion,
@@ -139,7 +125,7 @@ export function EvolucionSalarial() {
         actualNumero,
       ),
     }
-  }, [indices, mesOrigen, mesDestino, antiguoNumero, actualNumero])
+  }, [indices, mesOrigen, mesDestino, sueldosValidos, antiguoNumero, actualNumero])
 
   return (
     <div className="rounded-lg border border-[var(--grid-line)] bg-[var(--chart-surface)] p-4">
@@ -152,9 +138,7 @@ export function EvolucionSalarial() {
       </p>
 
       {errorCarga && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No se pudo cargar la información: {errorCarga}
-        </p>
+        <MensajeError mensaje={`No se pudo cargar la información: ${errorCarga}`} onReintentar={reintentar} />
       )}
 
       {!errorCarga && !series && <p className="text-sm text-[var(--text-muted)]">Cargando…</p>}
@@ -203,6 +187,12 @@ export function EvolucionSalarial() {
               />
             </label>
           </div>
+
+          {!sueldosValidos && (
+            <p className="text-xs text-[var(--text-secondary)]">
+              Ingresá sueldos mayores a cero, anterior y actual.
+            </p>
+          )}
 
           {resultados && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

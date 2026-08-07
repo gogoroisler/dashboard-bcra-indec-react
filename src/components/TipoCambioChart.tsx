@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import {
   CartesianGrid,
   Line,
@@ -9,6 +8,8 @@ import {
   YAxis,
 } from 'recharts'
 import { fetchSerieMonetaria, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
+import { useAsyncData } from '../hooks/useAsyncData'
+import { MensajeError } from './MensajeError'
 
 const formatFecha = (fecha: string) =>
   new Date(fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
@@ -33,25 +34,12 @@ function ChartTooltip({ active, payload }: ChartTooltipProps) {
 }
 
 export function TipoCambioChart() {
-  const [datos, setDatos] = useState<PuntoSerie[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelado = false
-    fetchSerieMonetaria(VARIABLES_BCRA.tipoCambioMayorista, { limit: 180 })
-      .then((puntos) => {
-        if (cancelado) return
-        // La API devuelve orden descendente (más nuevo primero); el gráfico necesita orden cronológico.
-        setDatos([...puntos].reverse())
-      })
-      .catch((err: unknown) => {
-        if (cancelado) return
-        setError(err instanceof Error ? err.message : 'Error al cargar datos')
-      })
-    return () => {
-      cancelado = true
-    }
-  }, [])
+  const { datos, error, reintentar } = useAsyncData<PuntoSerie[]>(() =>
+    fetchSerieMonetaria(VARIABLES_BCRA.tipoCambioMayorista, { limit: 180 }).then((puntos) =>
+      // La API devuelve orden descendente (más nuevo primero); el gráfico necesita orden cronológico.
+      [...puntos].reverse(),
+    ),
+  )
 
   return (
     <div className="rounded-lg border border-[var(--grid-line)] bg-[var(--chart-surface)] p-4">
@@ -63,9 +51,7 @@ export function TipoCambioChart() {
       </p>
 
       {error && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No se pudo cargar el tipo de cambio: {error}
-        </p>
+        <MensajeError mensaje={`No se pudo cargar el tipo de cambio: ${error}`} onReintentar={reintentar} />
       )}
 
       {!error && !datos && (

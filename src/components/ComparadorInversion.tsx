@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchSerieMonetariaCompleta, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
 import { fetchSerieDatosGobAr, SERIES_DATOS_GOB_AR } from '../lib/datosGobAr'
 import { EvolucionChart } from './EvolucionChart'
+import { useAsyncData } from '../hooks/useAsyncData'
+import { MensajeError } from './MensajeError'
 import {
   calcularCoeficiente,
   construirIndiceDesdeNivel,
@@ -71,58 +73,49 @@ interface SeriesCargadas {
 }
 
 export function ComparadorInversion() {
-  const [series, setSeries] = useState<SeriesCargadas | null>(null)
-  const [errorCarga, setErrorCarga] = useState<string | null>(null)
-
-  const [monto, setMonto] = useState('1000')
-  const [mesOrigen, setMesOrigen] = useState('')
-  const [mesDestino, setMesDestino] = useState('')
-
-  useEffect(() => {
-    let cancelado = false
+  const {
+    datos: series,
+    error: errorCarga,
+    reintentar,
+  } = useAsyncData<SeriesCargadas>(() =>
     Promise.all([
       fetchSerieMonetariaCompleta(VARIABLES_BCRA.inflacionMensual),
       fetchSerieMonetariaCompleta(VARIABLES_BCRA.tipoCambioMayorista),
       fetchSerieMonetariaCompleta(VARIABLES_BCRA.tasaDepositos30Dias),
       fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.ipcba),
-    ])
-      .then(([inflacion, dolar, tasaDepositos, ipcba]) => {
-        if (cancelado) return
-        const cargadas: SeriesCargadas = {
-          inflacion: [...inflacion].reverse(),
-          dolar: [...dolar].reverse(),
-          tasaDepositos: [...tasaDepositos].reverse(),
-          ipcba, // ya viene ascendente de datos.gob.ar
-        }
-        setSeries(cargadas)
+    ]).then(([inflacion, dolar, tasaDepositos, ipcba]) => ({
+      inflacion: [...inflacion].reverse(),
+      dolar: [...dolar].reverse(),
+      tasaDepositos: [...tasaDepositos].reverse(),
+      ipcba, // ya viene ascendente de datos.gob.ar
+    })),
+  )
 
-        // El rango de los selectores de fecha usa solo inflación/dólar/tasa (desde 2014).
-        // IPCBA queda afuera de esta cuenta a propósito: tiene menos historia y más
-        // rezago (ver DECISIONS.md 011) — si entrara acá, achicaría el rango disponible
-        // para las otras tres referencias por una sola que va más atrasada. IPCBA calcula
-        // su propio resultado por separado y muestra su propio error si el mes elegido
-        // queda fuera de su rango, sin restringir al resto.
-        const minComun = [cargadas.inflacion, cargadas.dolar, cargadas.tasaDepositos]
-          .map((s) => s[0].fecha.slice(0, 7))
-          .reduce((a, b) => (a > b ? a : b))
-        const maxComun = [cargadas.inflacion, cargadas.dolar, cargadas.tasaDepositos]
-          .map((s) => s[s.length - 1].fecha.slice(0, 7))
-          .reduce((a, b) => (a < b ? a : b))
+  const [monto, setMonto] = useState('1000')
+  const [mesOrigen, setMesOrigen] = useState('')
+  const [mesDestino, setMesDestino] = useState('')
 
-        setMesDestino(maxComun)
-        const [anio, mes] = maxComun.split('-').map(Number)
-        const haceUnAnio = new Date(anio, mes - 1 - 12, 1)
-        const candidato = haceUnAnio.toISOString().slice(0, 7)
-        setMesOrigen(candidato > minComun ? candidato : minComun)
-      })
-      .catch((err: unknown) => {
-        if (cancelado) return
-        setErrorCarga(err instanceof Error ? err.message : 'Error al cargar datos')
-      })
-    return () => {
-      cancelado = true
-    }
-  }, [])
+  // El rango de los selectores de fecha usa solo inflación/dólar/tasa (desde 2014).
+  // IPCBA queda afuera de esta cuenta a propósito: tiene menos historia y más
+  // rezago (ver DECISIONS.md 011) — si entrara acá, achicaría el rango disponible
+  // para las otras tres referencias por una sola que va más atrasada. IPCBA calcula
+  // su propio resultado por separado y muestra su propio error si el mes elegido
+  // queda fuera de su rango, sin restringir al resto.
+  useEffect(() => {
+    if (!series || mesDestino) return
+    const minComun = [series.inflacion, series.dolar, series.tasaDepositos]
+      .map((s) => s[0].fecha.slice(0, 7))
+      .reduce((a, b) => (a > b ? a : b))
+    const maxComun = [series.inflacion, series.dolar, series.tasaDepositos]
+      .map((s) => s[s.length - 1].fecha.slice(0, 7))
+      .reduce((a, b) => (a < b ? a : b))
+
+    setMesDestino(maxComun)
+    const [anio, mes] = maxComun.split('-').map(Number)
+    const candidato = new Date(anio, mes - 1 - 12, 1).toISOString().slice(0, 7)
+    setMesOrigen(candidato > minComun ? candidato : minComun)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [series])
 
   const indices = useMemo(() => {
     if (!series) return null
@@ -149,16 +142,17 @@ export function ComparadorInversion() {
   }, [series])
 
   const montoNumero = Number(monto)
+  const montoValido = !Number.isNaN(montoNumero) && montoNumero > 0
 
   const resultados = useMemo(() => {
-    if (!indices || !mesOrigen || !mesDestino || Number.isNaN(montoNumero)) return null
+    if (!indices || !mesOrigen || !mesDestino || !montoValido) return null
     return {
       inflacion: calcularResultado(indices.inflacion, mesOrigen, mesDestino, montoNumero),
       dolar: calcularResultado(indices.dolar, mesOrigen, mesDestino, montoNumero),
       tasaDepositos: calcularResultado(indices.tasaDepositos, mesOrigen, mesDestino, montoNumero),
       ipcba: calcularResultado(indices.ipcba, mesOrigen, mesDestino, montoNumero),
     }
-  }, [indices, mesOrigen, mesDestino, montoNumero])
+  }, [indices, mesOrigen, mesDestino, montoValido, montoNumero])
 
   return (
     <div className="rounded-lg border border-[var(--grid-line)] bg-[var(--chart-surface)] p-4">
@@ -172,9 +166,7 @@ export function ComparadorInversion() {
       </p>
 
       {errorCarga && (
-        <p className="text-sm text-[var(--text-secondary)]">
-          No se pudo cargar la información: {errorCarga}
-        </p>
+        <MensajeError mensaje={`No se pudo cargar la información: ${errorCarga}`} onReintentar={reintentar} />
       )}
 
       {!errorCarga && !series && <p className="text-sm text-[var(--text-muted)]">Cargando…</p>}
@@ -190,6 +182,11 @@ export function ComparadorInversion() {
                 onChange={(e) => setMonto(e.target.value)}
                 className="rounded border border-[var(--axis-line)] bg-transparent px-2 py-1 text-[var(--text-primary)]"
               />
+              {!montoValido && (
+                <span className="text-xs text-[var(--text-secondary)]">
+                  Ingresá un monto mayor a cero
+                </span>
+              )}
             </label>
             <label className="flex flex-col gap-1 text-sm text-[var(--text-secondary)]">
               Mes de origen
@@ -243,7 +240,7 @@ export function ComparadorInversion() {
             </div>
           )}
 
-          {indices && (
+          {indices && montoValido && (
             <EvolucionChart
               indice={indices.inflacion}
               mesOrigen={mesOrigen}

@@ -46,9 +46,12 @@ La app queda en `http://localhost:5173`.
 npm test
 ```
 
-Vitest cubre por ahora la lógica de cálculo en `src/lib/` (construcción de índices mensuales,
-coeficiente de ajuste) — es donde ocurrió un bug real durante el desarrollo (ver `AI_USAGE.md`).
-Tests de componentes quedan para una etapa posterior (ver `BACKLOG.md`).
+Vitest + React Testing Library cubren la lógica de cálculo en `src/lib/` (construcción de
+índices mensuales, coeficiente de ajuste — donde ocurrió un bug real durante el desarrollo, ver
+`AI_USAGE.md`) y el hook compartido `useAsyncData` (carga, error, reintentar). De los componentes,
+se testea en profundidad el más simple de las tres calculadoras (mismo patrón que comparten las
+otras dos) más el comportamiento distintivo de `ComparadorInversion` (que una fuente secundaria
+falle sin romper el resto) — no se duplica el mismo test tres veces por cobertura.
 
 ## Documentación del proyecto
 
