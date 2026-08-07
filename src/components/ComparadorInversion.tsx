@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchSerieMonetariaCompleta, VARIABLES_BCRA, type PuntoSerie } from '../lib/bcra'
-import { fetchSerieDatosGobAr, SERIES_DATOS_GOB_AR } from '../lib/datosGobAr'
 import { EvolucionChart } from './EvolucionChart'
 import { useAsyncData } from '../hooks/useAsyncData'
 import { MensajeError } from './MensajeError'
@@ -25,29 +24,18 @@ type ResultadoCalculo =
   | { ok: true; coeficiente: number; montoResultado: number }
   | { ok: false; error: string }
 
-function ResultadoLinea({
-  etiqueta,
-  resultado,
-}: {
-  etiqueta?: string
-  resultado: ResultadoCalculo
-}) {
-  return (
-    <div>
-      {etiqueta && <p className="text-xs text-[var(--text-muted)]">{etiqueta}</p>}
-      {resultado.ok ? (
-        <>
-          <p className="text-xl font-semibold text-[var(--text-primary)]">
-            {formatMoneda(resultado.montoResultado)}
-          </p>
-          <p className="text-sm text-[var(--text-muted)]">
-            {formatPorcentaje((resultado.coeficiente - 1) * 100)}%
-          </p>
-        </>
-      ) : (
-        <p className="text-sm text-[var(--text-muted)]">{resultado.error}</p>
-      )}
-    </div>
+function ResultadoLinea({ resultado }: { resultado: ResultadoCalculo }) {
+  return resultado.ok ? (
+    <>
+      <p className="text-xl font-semibold text-[var(--text-primary)]">
+        {formatMoneda(resultado.montoResultado)}
+      </p>
+      <p className="text-sm text-[var(--text-muted)]">
+        {formatPorcentaje((resultado.coeficiente - 1) * 100)}%
+      </p>
+    </>
+  ) : (
+    <p className="text-sm text-[var(--text-muted)]">{resultado.error}</p>
   )
 }
 
@@ -69,7 +57,6 @@ interface SeriesCargadas {
   inflacion: PuntoSerie[]
   dolar: PuntoSerie[]
   tasaDepositos: PuntoSerie[]
-  ipcba: PuntoSerie[]
 }
 
 export function ComparadorInversion() {
@@ -82,12 +69,10 @@ export function ComparadorInversion() {
       fetchSerieMonetariaCompleta(VARIABLES_BCRA.inflacionMensual),
       fetchSerieMonetariaCompleta(VARIABLES_BCRA.tipoCambioMayorista),
       fetchSerieMonetariaCompleta(VARIABLES_BCRA.tasaDepositos30Dias),
-      fetchSerieDatosGobAr(SERIES_DATOS_GOB_AR.ipcba),
-    ]).then(([inflacion, dolar, tasaDepositos, ipcba]) => ({
+    ]).then(([inflacion, dolar, tasaDepositos]) => ({
       inflacion: [...inflacion].reverse(),
       dolar: [...dolar].reverse(),
       tasaDepositos: [...tasaDepositos].reverse(),
-      ipcba, // ya viene ascendente de datos.gob.ar
     })),
   )
 
@@ -95,12 +80,6 @@ export function ComparadorInversion() {
   const [mesOrigen, setMesOrigen] = useState('')
   const [mesDestino, setMesDestino] = useState('')
 
-  // El rango de los selectores de fecha usa solo inflación/dólar/tasa (desde 2014).
-  // IPCBA queda afuera de esta cuenta a propósito: tiene menos historia y más
-  // rezago (ver DECISIONS.md 011) — si entrara acá, achicaría el rango disponible
-  // para las otras tres referencias por una sola que va más atrasada. IPCBA calcula
-  // su propio resultado por separado y muestra su propio error si el mes elegido
-  // queda fuera de su rango, sin restringir al resto.
   useEffect(() => {
     if (!series || mesDestino) return
     const minComun = [series.inflacion, series.dolar, series.tasaDepositos]
@@ -126,7 +105,6 @@ export function ComparadorInversion() {
         series.tasaDepositos,
         (p) => 1 + p.valor / 12 / 100,
       ),
-      ipcba: construirIndiceDesdeNivel(series.ipcba),
     }
   }, [series])
 
@@ -150,7 +128,6 @@ export function ComparadorInversion() {
       inflacion: calcularResultado(indices.inflacion, mesOrigen, mesDestino, montoNumero),
       dolar: calcularResultado(indices.dolar, mesOrigen, mesDestino, montoNumero),
       tasaDepositos: calcularResultado(indices.tasaDepositos, mesOrigen, mesDestino, montoNumero),
-      ipcba: calcularResultado(indices.ipcba, mesOrigen, mesDestino, montoNumero),
     }
   }, [indices, mesOrigen, mesDestino, montoValido, montoNumero])
 
@@ -161,8 +138,7 @@ export function ComparadorInversion() {
       </h2>
       <p className="mb-4 text-sm text-[var(--text-secondary)]">
         Si tenías un monto en el mes de origen, comparación de tres caminos hasta el mes de
-        destino: quedarte en pesos, comprar dólares, o un plazo fijo. Datos del BCRA, con el IPCBA
-        (INDEC/IDECBA) como segunda referencia de inflación para CABA.
+        destino: quedarte en pesos, comprar dólares, o un plazo fijo. Todo con datos del BCRA.
       </p>
 
       {errorCarga && (
@@ -214,20 +190,9 @@ export function ComparadorInversion() {
 
           {resultados && (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-md border border-[var(--grid-line)] p-3">
-                <p className="text-sm text-[var(--text-secondary)]">Quedarte en pesos</p>
-                <ResultadoLinea etiqueta="Nacional (BCRA)" resultado={resultados.inflacion} />
-                <div className="mt-3 border-t border-[var(--grid-line)] pt-3">
-                  <ResultadoLinea etiqueta="Ciudad de Buenos Aires (IPCBA)" resultado={resultados.ipcba} />
-                  <p className="mt-1 text-xs text-[var(--text-muted)]">
-                    El IPCBA mide precios solo de CABA, no de todo el país — no es directamente
-                    comparable con el resto del dashboard.
-                  </p>
-                </div>
-              </div>
-
               {(
                 [
+                  ['Quedarte en pesos', resultados.inflacion],
                   ['Comprar dólares', resultados.dolar],
                   ['Plazo fijo', resultados.tasaDepositos],
                 ] as const

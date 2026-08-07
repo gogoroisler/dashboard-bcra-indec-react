@@ -1,13 +1,41 @@
 # Dashboard BCRA / INDEC
 
-Herramientas para decisiones financieras cotidianas en Argentina, con datos públicos del BCRA y del INDEC:
+**[Ver demo en vivo →](https://gogoroisler.github.io/dashboard-bcra-indec-react/)**
 
-- **¿Qué me convenía hacer con mi plata?** — comparación entre quedarte en pesos (inflación nacional e IPCBA), comprar dólares o hacer un plazo fijo, con gráfico de evolución.
-- **¿Tu sueldo le ganó a la inflación?** — comparación de sueldo anterior vs. actual contra inflación y contra el Índice de Salarios de INDEC.
+![Screenshot del dashboard](docs/screenshot.png)
+
+## Por qué
+
+Argentina tiene una de las inflaciones más altas del mundo. En ese contexto, "¿me convenía
+comprar dólares o dejar la plata en un plazo fijo?" o "¿mi sueldo le ganó a la inflación este
+año?" no son preguntas académicas — son decisiones que buena parte del país se hace todos los
+meses, generalmente a ojo. Este dashboard responde esas preguntas con datos públicos reales del
+BCRA y el INDEC, no con estimaciones: mismo cálculo que usa la técnica contable de reexpresión
+(comparar niveles de índice entre dos fechas), aplicado a decisiones cotidianas.
+
+## Qué hace
+
+- **¿Qué me convenía hacer con mi plata?** — comparación entre quedarte en pesos, comprar dólares
+  o hacer un plazo fijo, con gráfico de evolución mes a mes.
+- **¿Tu sueldo le ganó a la inflación?** — comparación de sueldo anterior vs. actual, contra
+  inflación y contra el promedio salarial de la economía.
 - **Ajuste de alquileres según ICL.**
 - Gráfico de tipo de cambio mayorista.
 
 Proyecto de portfolio — carrera Técnico en Desarrollo de Software.
+
+## Índices que consume
+
+| Índice | Fuente | Se usa para |
+|---|---|---|
+| Inflación mensual | BCRA | Ajuste por inflación / reexpresión |
+| Tipo de cambio mayorista | BCRA | Comparar contra comprar dólares |
+| Tasa de depósitos a 30 días | BCRA | Comparar contra un plazo fijo |
+| ICL (Índice para Contratos de Locación) | BCRA | Ajuste de alquileres |
+| Índice de Salarios | INDEC | Evolución salarial vs. promedio de la economía |
+
+Ver `DECISIONS.md` para el detalle de cada fuente (incluyendo una que se probó y se sacó — IPCBA,
+decisión 017).
 
 ## Stack
 
@@ -50,13 +78,13 @@ Vitest + React Testing Library cubren la lógica de cálculo en `src/lib/` (cons
 índices mensuales, coeficiente de ajuste — donde ocurrió un bug real durante el desarrollo, ver
 `AI_USAGE.md`) y el hook compartido `useAsyncData` (carga, error, reintentar). De los componentes,
 se testea en profundidad el más simple de las tres calculadoras (mismo patrón que comparten las
-otras dos) más el comportamiento distintivo de `ComparadorInversion` (que una fuente secundaria
-falle sin romper el resto) — no se duplica el mismo test tres veces por cobertura.
+otras dos, no se duplica tres veces) más un test de `ComparadorInversion` que verifica sus tres
+resultados en paralelo.
 
 ## Documentación del proyecto
 
 - `roadmap-contexto.md` — contexto general de portfolio y prioridad de este proyecto.
-- `DECISIONS.md` — decisiones técnicas con su porqué.
+- `DECISIONS.md` — decisiones técnicas con su porqué (incluyendo las que se revirtieron).
 - `BACKLOG.md` — funcionalidades evaluadas y pospuestas.
 - `AI_USAGE.md` — cómo se usó IA en el desarrollo.
 

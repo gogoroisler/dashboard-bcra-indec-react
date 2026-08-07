@@ -148,3 +148,9 @@ Ambas secciones conviven en el mismo dashboard (no son proyectos separados) porq
 **Alternativas consideradas:** ninguna — ambas correcciones son requisitos de la configuración elegida (Vitest sin globals + mocks compartidos por módulo), no hay una alternativa razonable distinta a limpiar explícitamente entre tests.
 
 ---
+
+### 017 — Se revierte IPCBA de la tarjeta "Quedarte en pesos"
+**Fecha:** 2026-08-07
+**Decisión:** Se saca IPCBA de `ComparadorInversion` (decisión 011) y de `SERIES_DATOS_GOB_AR` en `src/lib/datosGobAr.ts`. El test que verificaba "IPCBA falla sin romper el resto" (decisión 016) se reemplaza por uno que verifica que las tres tarjetas (pesos/dólar/plazo fijo) muestren un resultado en paralelo — ya no hay una cuarta referencia que pueda fallar.
+**Por qué:** En uso real, la mayoría de los rangos de fecha hacían que IPCBA mostrara "No hay datos para alguno de los meses seleccionados" (su historia arranca en 2022 y va varios meses rezagada respecto al resto) — y ese mensaje aparecía en la tarjeta principal, lo primero que ve cualquiera que entra a la demo. El aporte real a la pregunta central ("¿qué me convenía hacer con mi plata?") era marginal: inflación nacional vs. inflación de CABA rara vez cambia la decisión, a diferencia de dólar o plazo fijo, que sí son caminos genuinamente distintos. El costo (una tarjeta principal que frecuentemente muestra un error) superaba el beneficio (una referencia secundaria de bajo impacto en la decisión).
+**Alternativas consideradas:** moverlo a un lugar secundario (nota colapsada, fuera de la tarjeta principal) en vez de sacarlo — descartada por Santiago; se prioriza que la demo se vea sólida desde el primer vistazo antes que preservar el dato.
